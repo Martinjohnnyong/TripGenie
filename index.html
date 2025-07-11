@@ -1449,6 +1449,15 @@
             height: 100%;
             object-fit: cover;
             border-radius: 18px;
+            background: #000;
+        }
+
+        .video-frame video::-webkit-media-controls {
+            display: flex !important;
+        }
+
+        .video-frame video::-webkit-media-controls-panel {
+            background: rgba(0, 0, 0, 0.8);
         }
 
         .video-overlay {
@@ -1462,15 +1471,14 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            opacity: 1;
             transition: opacity 0.3s ease;
             border-radius: 20px;
             cursor: pointer;
+            z-index: 10;
         }
 
         .video-overlay.hidden {
-            opacity: 0;
-            pointer-events: none;
+            display: none !important;
         }
 
         .play-button-large {
@@ -3052,19 +3060,27 @@
             <div class="demo-showcase" data-aos="fade-up" data-aos-delay="400">
                 <div class="demo-video-container">
                     <div class="video-frame">
-                        <video id="demoVideo" controls muted>
-                            <source src="TripGenie Telegram Chatbot Demo.mp4" type="video/mp4">
-                            Your browser does not support the video tag.
+                        <video id="demoVideo" controls muted preload="metadata" playsinline webkit-playsinline>
+                            <source src="./TripGenie Telegram Chatbot Demo.mp4" type="video/mp4">
+                            <source src="TripGenie%20Telegram%20Chatbot%20Demo.mp4" type="video/mp4">
+                            Your browser does not support the video tag. 
+                            <a href="./TripGenie Telegram Chatbot Demo.mp4" download>Download the video instead</a>
                         </video>
                         <div class="video-overlay" id="videoOverlay">
                             <div class="play-button-large" onclick="playDemoVideo()">
                                 <i class="fas fa-play"></i>
                             </div>
                             <div class="video-description">
-                                <h3>TripGenie Telegram Chatbot Demo</h3>
-                                <p>Experience our AI-powered travel assistant in action</p>
+                                <h3>Live Demo: Planning a Trip to Japan</h3>
+                                <p>See how TripGenie creates a personalized 7-day itinerary</p>
                             </div>
                         </div>
+                    </div>
+                    <div class="video-fallback" style="text-align: center; margin-top: 1rem;">
+                        <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem;">
+                            Having trouble with the video? 
+                            <a href="./TripGenie Telegram Chatbot Demo.mp4" download style="color: var(--adventure-gold); text-decoration: underline;">Download it here</a>
+                        </p>
                     </div>
                 </div>
                 <div class="demo-features">
@@ -3414,15 +3430,71 @@
             const overlay = document.getElementById('videoOverlay');
             
             if (video && overlay) {
-                video.play();
-                overlay.classList.add('hidden');
+                // Hide overlay immediately
+                overlay.style.display = 'none';
                 
-                // Add event listener to show overlay when video ends
+                // Try to play the video
+                const playPromise = video.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        // Video started playing successfully
+                        console.log('Video is playing');
+                    }).catch(error => {
+                        // Auto-play was prevented or failed
+                        console.log('Video play failed:', error);
+                        overlay.style.display = 'flex';
+                        alert('Please click the video player to start playback');
+                    });
+                }
+                
+                // Add event listeners for video events
                 video.addEventListener('ended', function() {
-                    overlay.classList.remove('hidden');
+                    overlay.style.display = 'flex';
+                });
+                
+                video.addEventListener('pause', function() {
+                    overlay.style.display = 'flex';
+                });
+                
+                video.addEventListener('error', function(e) {
+                    console.error('Video error:', e);
+                    overlay.style.display = 'flex';
+                    // Show fallback message
+                    const errorMsg = document.createElement('div');
+                    errorMsg.style.cssText = 'color: white; text-align: center; padding: 20px;';
+                    errorMsg.innerHTML = 'Unable to load video. <a href="./TripGenie Telegram Chatbot Demo.mp4" download style="color: #ff6b35;">Download instead</a>';
+                    video.parentNode.appendChild(errorMsg);
                 });
             }
         }
+
+        // Initialize video when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            const video = document.getElementById('demoVideo');
+            const overlay = document.getElementById('videoOverlay');
+            
+            if (video && overlay) {
+                // Ensure overlay is visible initially
+                overlay.style.display = 'flex';
+                
+                // Add click event to video itself as backup
+                video.addEventListener('click', function() {
+                    if (video.paused) {
+                        playDemoVideo();
+                    }
+                });
+                
+                // Check if video can be loaded
+                video.addEventListener('loadedmetadata', function() {
+                    console.log('Video metadata loaded successfully');
+                });
+                
+                video.addEventListener('canplay', function() {
+                    console.log('Video can start playing');
+                });
+            }
+        });
 
         // Video demo controls (legacy support)
         function toggleVideo() {
