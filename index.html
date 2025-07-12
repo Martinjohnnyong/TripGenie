@@ -1450,14 +1450,28 @@
             object-fit: cover;
             border-radius: 18px;
             background: #000;
+            position: relative;
+            z-index: 2;
         }
 
         .video-frame video::-webkit-media-controls {
             display: flex !important;
+            opacity: 1 !important;
+            z-index: 100 !important;
         }
 
         .video-frame video::-webkit-media-controls-panel {
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.8) !important;
+            z-index: 100 !important;
+        }
+
+        .video-frame video::-webkit-media-controls-play-button,
+        .video-frame video::-webkit-media-controls-fullscreen-button {
+            z-index: 100 !important;
+        }
+
+        .video-frame:hover video::-webkit-media-controls {
+            opacity: 1 !important;
         }
 
         .video-overlay {
@@ -1474,11 +1488,33 @@
             transition: opacity 0.3s ease;
             border-radius: 20px;
             cursor: pointer;
-            z-index: 10;
+            z-index: 1;
+            pointer-events: auto;
         }
 
         .video-overlay.hidden {
             display: none !important;
+            pointer-events: none;
+        }
+
+        .video-frame:hover .video-overlay:not(.hidden) {
+            opacity: 0.9;
+        }
+
+        .video-frame video:hover {
+            z-index: 10 !important;
+        }
+
+        /* Ensure video controls are always accessible */
+        .video-frame video::-webkit-media-controls {
+            position: relative;
+            z-index: 1000 !important;
+        }
+
+        .video-frame:hover video::-webkit-media-controls,
+        .video-frame video:focus::-webkit-media-controls {
+            opacity: 1 !important;
+            display: flex !important;
         }
 
         .play-button-large {
@@ -3431,6 +3467,7 @@
             
             if (video && overlay) {
                 // Hide overlay immediately
+                overlay.classList.add('hidden');
                 overlay.style.display = 'none';
                 
                 // Try to play the video
@@ -3440,32 +3477,17 @@
                     playPromise.then(() => {
                         // Video started playing successfully
                         console.log('Video is playing');
+                        // Ensure video controls are visible
+                        video.setAttribute('controls', 'true');
+                        video.style.zIndex = '1000';
                     }).catch(error => {
                         // Auto-play was prevented or failed
                         console.log('Video play failed:', error);
+                        overlay.classList.remove('hidden');
                         overlay.style.display = 'flex';
                         alert('Please click the video player to start playback');
                     });
                 }
-                
-                // Add event listeners for video events
-                video.addEventListener('ended', function() {
-                    overlay.style.display = 'flex';
-                });
-                
-                video.addEventListener('pause', function() {
-                    overlay.style.display = 'flex';
-                });
-                
-                video.addEventListener('error', function(e) {
-                    console.error('Video error:', e);
-                    overlay.style.display = 'flex';
-                    // Show fallback message
-                    const errorMsg = document.createElement('div');
-                    errorMsg.style.cssText = 'color: white; text-align: center; padding: 20px;';
-                    errorMsg.innerHTML = 'Unable to load video. <a href="./TripGenie Telegram Chatbot Demo.mp4" download style="color: #ff6b35;">Download instead</a>';
-                    video.parentNode.appendChild(errorMsg);
-                });
             }
         }
 
@@ -3477,12 +3499,47 @@
             if (video && overlay) {
                 // Ensure overlay is visible initially
                 overlay.style.display = 'flex';
+                overlay.classList.remove('hidden');
                 
                 // Add click event to video itself as backup
-                video.addEventListener('click', function() {
-                    if (video.paused) {
+                video.addEventListener('click', function(e) {
+                    if (video.paused && !overlay.classList.contains('hidden')) {
+                        e.preventDefault();
                         playDemoVideo();
                     }
+                });
+                
+                // Handle video events
+                video.addEventListener('play', function() {
+                    overlay.classList.add('hidden');
+                    overlay.style.display = 'none';
+                    video.style.zIndex = '1000';
+                });
+                
+                video.addEventListener('pause', function() {
+                    // Only show overlay if video hasn't ended and user manually paused
+                    if (!video.ended) {
+                        setTimeout(() => {
+                            overlay.classList.remove('hidden');
+                            overlay.style.display = 'flex';
+                        }, 500);
+                    }
+                });
+                
+                video.addEventListener('ended', function() {
+                    overlay.classList.remove('hidden');
+                    overlay.style.display = 'flex';
+                });
+                
+                video.addEventListener('error', function(e) {
+                    console.error('Video error:', e);
+                    overlay.classList.remove('hidden');
+                    overlay.style.display = 'flex';
+                    // Show fallback message
+                    const errorMsg = document.createElement('div');
+                    errorMsg.style.cssText = 'color: white; text-align: center; padding: 20px;';
+                    errorMsg.innerHTML = 'Unable to load video. <a href="./TripGenie Telegram Chatbot Demo.mp4" download style="color: #ff6b35;">Download instead</a>';
+                    video.parentNode.appendChild(errorMsg);
                 });
                 
                 // Check if video can be loaded
@@ -3492,6 +3549,28 @@
                 
                 video.addEventListener('canplay', function() {
                     console.log('Video can start playing');
+                });
+                
+                // Ensure video controls are always accessible when video is playing
+                video.addEventListener('mouseenter', function() {
+                    if (!video.paused) {
+                        video.style.zIndex = '1000';
+                    }
+                });
+                
+                // Handle fullscreen events
+                video.addEventListener('fullscreenchange', function() {
+                    if (document.fullscreenElement === video) {
+                        overlay.style.display = 'none';
+                        overlay.classList.add('hidden');
+                    }
+                });
+                
+                video.addEventListener('webkitfullscreenchange', function() {
+                    if (document.webkitFullscreenElement === video) {
+                        overlay.style.display = 'none';
+                        overlay.classList.add('hidden');
+                    }
                 });
             }
         });
